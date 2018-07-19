@@ -26,7 +26,7 @@
 
       allocate( eigenv(1:nbasis),work(1:3*nbasis) )
       a1=H(1,1)
-!      write(*,*) a1,H(1,1:10)
+      write(*,*) a1,H(1,1:10)
       call dsyev('N','U',nbasis,H,nbasis,eigenv,work,3*nbasis,ntmp)
       a2=eigenv(1)
 

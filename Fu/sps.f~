@@ -33,21 +33,6 @@
         sporbitb(i1)=ibset(sporbitb(i1),i1)
       enddo
       close(101)
-
-      lspspairing=.true.
-      if (mod(nsps,2)/=0) then
-        lspspairing=.false.
-        go to 201
-      endif
-      do i1=2,nsps,2
-        if ( (sporbit(i1-1)%qnn/=sporbit(i1)%qnn)
-     $.or.(sporbit(i1-1)%qnm/=-sporbit(i1)%qnm) ) then
-          lspspairing=.false.
-          go to 201
-        endif
-      enddo
-
-201   continue
       end subroutine
 
 

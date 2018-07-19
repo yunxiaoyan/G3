@@ -6,6 +6,7 @@
       integer :: a(1:100000),b(1:100000),c(1:100000),d(1:100000)
       real*8 :: aspe(1:100000),atbme(1:100000)
       real*8 :: delta,g
+      integer :: result,systemqq
 
       write(*,*) 'Please input delta and g: '
       read(*,*) delta,g
@@ -51,4 +52,7 @@
       enddo
       close(101)
 
+      result=systemqq('./FCIone')
+
+      stop
       end
