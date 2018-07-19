@@ -1,1 +1,3 @@
-4
+4            -- number of particles
+p            -- exact or pairing? (e/p)
+
