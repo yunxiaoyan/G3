@@ -17,16 +17,18 @@
 
       allocate( eigenv(1:nbasis),work(1:3*nbasis) )
       a1=H(1,1)
+!     write(*,*) a1,H(1,10)
       call dsyev('N','U',nbasis,H,nbasis,eigenv,work,3*nbasis,ntmp)
-      write(*,*) eigenv(1),eigenv(1)-a1
+      write(*,*) 'Eigenv =',eigenv(1)
+      write(*,*) 'DeltaE =',eigenv(1)-a1
 
-      do i1=1,nbasis
-        write(*,'(i8)',advance='no') i1
-        do i2=1,nsps
-          write(*,'(l2)',advance='no') btest(vectorb(i1),i2) 
-        enddo
-        write(*,*)
-      enddo
+!      do i1=1,nbasis
+!        write(*,'(i8)',advance='no') i1
+!        do i2=1,nsps
+!          write(*,'(l2)',advance='no') btest(vectorb(i1),i2) 
+!        enddo
+!        write(*,*)
+!      enddo
 
 
       deallocate( eigenv,work)
