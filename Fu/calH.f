@@ -20,24 +20,25 @@
       implicit none
       integer :: i1
       integer :: tbdm,p,q,r,s
-      integer*8 :: b1,b2
+      integer*8 :: b1,b2,b3
 
       tbdm=0
-      if (.not.btest(b2,r)) go to 201
-      i1=poppar(ibits(b2,1,r-1))
-      b2=b2-iand(b2,sporbitb(r))
-      if (.not.btest(b2,s)) go to 201
-      i1=ieor( i1,poppar(ibits(b2,1,s-1)) )
-      b2=b2-iand(b2,sporbitb(s))
+      b3=b2
+      if (.not.btest(b3,r)) go to 201
+      i1=poppar(ibits(b3,1,r-1))
+      b3=b3-iand(b3,sporbitb(r))
+      if (.not.btest(b3,s)) go to 201
+      i1=ieor( i1,poppar(ibits(b3,1,s-1)) )
+      b3=b3-iand(b3,sporbitb(s))
 
-      if (btest(b2,q)) go to 201
-      i1=ieor( i1,poppar(ibits(b2,1,q-1)) )
-      b2=b2+sporbitb(q)
-      if (btest(b2,p)) go to 201
-      i1=ieor( i1,poppar(ibits(b2,1,p-1)) )
-      b2=b2+sporbitb(p)
+      if (btest(b3,q)) go to 201
+      i1=ieor( i1,poppar(ibits(b3,1,q-1)) )
+      b3=b3+sporbitb(q)
+      if (btest(b3,p)) go to 201
+      i1=ieor( i1,poppar(ibits(b3,1,p-1)) )
+      b3=b3+sporbitb(p)
 
-      if (b1/=b2) go to 201
+      if (b1/=b3) go to 201
       if (btest(i1,0)) then
         tbdm=-1
       else
@@ -53,18 +54,19 @@
       implicit none
       integer :: i1
       integer :: obdm,p,q
-      integer*8 :: b1,b2
+      integer*8 :: b1,b2,b3
 
       obdm=0
-      if (.not.btest(b2,q)) go to 202
-      i1=poppar(ibits(b2,1,q-1))
-      b2=b2-iand(b2,sporbitb(q))
+      b3=b2
+      if (.not.btest(b3,q)) go to 202
+      i1=poppar(ibits(b3,1,q-1))
+      b3=b3-iand(b3,sporbitb(q))
 
-      if (btest(b2,p)) go to 202
-      i1=ieor( i1,poppar(ibits(b2,1,p-1)) )
-      b2=b2+sporbitb(p)
+      if (btest(b3,p)) go to 202
+      i1=ieor( i1,poppar(ibits(b3,1,p-1)) )
+      b3=b3+sporbitb(p)
 
-      if (b1/=b2) go to 202
+      if (b1/=b3) go to 202
       if (btest(i1,0)) then
         obdm=-1
       else
@@ -123,17 +125,18 @@
       do i0=1,ntbme
         read(101,*) a(i0),b(i0),c(i0),d(i0),atbme(i0)
       enddo
-      do i1=1,nbasis
-        vtmp1=vectorb(i1)  ! b1
-        do i2=i1,nbasis 
-          vtmp2=vectorb(i2)  ! b2
-          if (bitdiff(i1,i2)>2) go to 203
-          do i0=1,ntbme
-            H(i1,i2)=H(i1,i2)
+      do i0=1,ntbme
+        do i1=1,nbasis
+          vtmp1=vectorb(i1)  ! b1
+          do i2=i1,nbasis 
+            vtmp2=vectorb(i2)  ! b2
+            if (bitdiff(i1,i2)>2) go to 203
+              H(i1,i2)=H(i1,i2)
      $+tbdm(vtmp1,vtmp2,a(i0),b(i0),d(i0),c(i0))*atbme(i0)
+              if ( (a(i0)/=c(i0)).or.(b(i0)/=d(i0)) ) H(i1,i2)=H(i1,i2)
      $+tbdm(vtmp1,vtmp2,c(i0),d(i0),b(i0),a(i0))*atbme(i0)
-          enddo
-203     enddo
+203       enddo
+        enddo
       enddo
 
       close(101)

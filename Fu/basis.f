@@ -9,18 +9,19 @@
 
       
       contains
-      subroutine setbasis_exact(totalm)
+      subroutine setbasis_exact()  ! Not using totalm yet!!!
       use mod_sps
       implicit none 
       integer :: i1,i2,i3
-      integer :: totalm
+!      integer :: totalm
       integer,pointer :: vectortmp(:)
 
       open(unit=101,file='parameter.dat')
       read(101,*) nparticle
+!      read(101,*) totalm
       close(101)
       nbasis=1
-      do i1=nparticle+1,nsps
+      do i1=nsps-nparticle+1,nsps
         nbasis=nbasis*i1
       enddo
       do i1=1,nparticle
@@ -76,7 +77,7 @@
       enddo
 
 
-      deallocate(vectortmp)
+      deallocate(vectortmp,vectori)
       end subroutine
 
 
