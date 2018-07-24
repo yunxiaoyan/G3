@@ -46,9 +46,9 @@
         write(101,'(f10.5)',advance='no') aspe(i1)
       enddo
       write(101,*) 
-      write(101,'(a27)') '  a  b  c  d                        v'
+      write(101,'(a31)') '   a   b   c   d                        v'
       do i1=1,ntbme
-        write(101,'(4i3,f25.15)') a(i1),b(i1),c(i1),d(i1),atbme(i1) 
+        write(101,'(4i4,f25.15)') a(i1),b(i1),c(i1),d(i1),atbme(i1) 
       enddo
       close(101)
 
