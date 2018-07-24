@@ -14,6 +14,7 @@
       use mod_sps
       implicit none 
       integer :: i1,i2,i3
+      integer*8 :: i11
 !      integer :: totalm
       integer,pointer :: vectortmp(:)
 
@@ -21,13 +22,18 @@
       read(101,*) nparticle
 !      read(101,*) totalm
       close(101)
-      nbasis=1
+      i11=1
       do i1=nsps-nparticle+1,nsps
-        nbasis=nbasis*i1
+        if (9223372036854775807/int8(i1)<i11) then
+          write(*,*) 'Cannot calculate the dimension of basis!!! STOP! '
+          stop
+        endif
+        i11=i11*int8(i1)
       enddo
       do i1=1,nparticle
-        nbasis=nbasis/i1
+        i11=i11/int8(i1)
       enddo
+      nbasis=int4(i11)
       
       allocate( vectorb(1:nbasis),vectori(1:nparticle,1:nbasis) )
       allocate( vectortmp(1:nparticle) )
@@ -99,13 +105,6 @@
       read(101,*) nparticle
 !      read(101,*) totalm
       close(101)
-      nbasis=1
-      do i1=nsps-nparticle+1,nsps
-        nbasis=nbasis*i1
-      enddo
-      do i1=1,nparticle
-        nbasis=nbasis/i1
-      enddo
       
       allocate( vectortmp(1:nparticle) )
       allocate( vectori(1:nparticle,1:nbasistmp) )

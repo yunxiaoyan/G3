@@ -11,6 +11,10 @@
       real*8,pointer :: eigenv(:),work(:)
       character(len=1) :: c1
 
+      write(*,*) '#####################################################'
+      write(*,*) '#               This is FCIone program              #'
+      write(*,*) '#####################################################'
+
       open(unit=101,file='parameter.dat')
       read(101,*)
       read(101,*) c1
@@ -22,7 +26,11 @@
       elseif (  (c1=='p').or.(c1=='P') ) then
         call setbasis_pairing()
       endif
+      write(*,*) 'Basis vectors generated... '
+      write(*,'(a13,i11)') '  dimension =',nbasis
+
       call calHmatrix_SM()
+      write(*,*) 'H matrix elements calculated... '
 
       allocate( eigenv(1:nbasis),work(1:3*nbasis) )
       a1=H(1,1)
@@ -31,6 +39,7 @@
       a2=eigenv(1)
 
       open(unit=101,file='level.dat')
+      write(101,'(a11,i11)') 'dimension =',nbasis
       write(*,'(5x,3a15)') 'Eigenv','Ex','DeltaE'
       write(101,'(5x,3a15)') 'Eigenv','Ex','DeltaE'
       do i1=1,min(100,nbasis)
