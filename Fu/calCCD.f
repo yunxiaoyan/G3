@@ -1,6 +1,6 @@
       include 'sps.f'
 
-      module mod_CCDsimple
+      module mod_CCDsimplepairing
       save
       real*8 :: deltaE,weight,Delta
       integer :: nparticle
@@ -463,7 +463,7 @@
       end subroutine
 
 
-      subroutine calCCDsimple()
+      subroutine calCCDsimplepairing()
       use mod_sps
       implicit none
       integer :: i0,i1,i2,i3,i4,i5
@@ -607,7 +607,7 @@
       end subroutine
 
 
-      end module mod_CCDsimple
+      end module mod_CCDsimplepairing
 
 
 
