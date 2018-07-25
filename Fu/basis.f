@@ -34,6 +34,7 @@
         i11=i11/int8(i1)
       enddo
       nbasis=int4(i11)
+      write(*,'(a23,i10)') '  Dimension of basis = ',nbasis
       
       allocate( vectorb(1:nbasis),vectori(1:nparticle,1:nbasis) )
       allocate( vectortmp(1:nparticle) )
@@ -161,6 +162,7 @@
       
 204   continue
       nbasis=i1-1
+      write(*,'(a23,i10)') '  Dimension of basis = ',nbasis
 
       allocate( vectorb(1:nbasis) )
       vectorb=0

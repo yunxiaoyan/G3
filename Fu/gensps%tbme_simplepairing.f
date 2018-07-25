@@ -52,7 +52,5 @@
       enddo
       close(101)
 
-      result=systemqq('./FCIone')
-
       stop
       end
