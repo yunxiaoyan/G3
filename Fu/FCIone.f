@@ -38,7 +38,7 @@
       call dsyev('N','U',nbasis,H,nbasis,eigenv,work,3*nbasis,ntmp)
       a2=eigenv(1)
 
-      open(unit=101,file='level.dat')
+      open(unit=101,file='level_FCIone.dat')
       write(101,'(a11,i11)') 'dimension =',nbasis
       write(*,'(5x,3a15)') 'Eigenv','Ex','DeltaE'
       write(101,'(5x,3a15)') 'Eigenv','Ex','DeltaE'
