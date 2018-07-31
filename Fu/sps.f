@@ -3,15 +3,17 @@
       integer :: nsps  ! number of sp orbit
       logical :: lspspairing
       type sps
-        integer :: qnw  ! quantum number w
         integer :: qnn  ! quantum number n
-        integer :: qnl  ! quantum number l
-        integer :: qnj  ! quantum number 2j
         integer :: qnm  ! quantum number 2m
-        integer :: qntau  ! quantum number 2tau
+        integer :: qnnm(1:5) ! quantum number for nuclear matter nx,ny,nz,sz,tz
+!        integer :: qnl  ! quantum number l
+!        integer :: qnj  ! quantum number 2j
+!        integer :: qntau  ! quantum number 2tau
+!        integer :: qnw  ! quantum number w
       end type
       type(sps),pointer :: sporbit(:)
       integer*8,pointer :: sporbitb(:)
+      integer,pointer :: rspsnm(:,:,:,:,:)
 
 
       contains
@@ -21,12 +23,8 @@
       open(unit=101,file='sps.b')
       read(101,*) nsps
       allocate(sporbit(1:nsps),sporbitb(1:nsps))
-      sporbit(:)%qnw=-999999
       sporbit(:)%qnn=-999999
-      sporbit(:)%qnl=-999999
-      sporbit(:)%qnj=-999999
       sporbit(:)%qnm=-999999
-      sporbit(:)%qntau=-999999
       sporbitb=0
       do i1=1,nsps
         read(101,*) sporbit(i1)%qnn,sporbit(i1)%qnm
@@ -48,6 +46,32 @@
       enddo
 
 201   continue
+      end subroutine
+
+
+      subroutine readsps_nuclearmatter()
+      implicit none
+      integer :: i1,i2,i3,i4,i5,i6,Nmax
+
+      open(unit=101,file='parameter.dat')
+      read(101,*)
+      read(101,*)
+      read(101,*)
+      read(101,*) i1,i1,Nmax
+      close(101)
+      allocate( rspsnm(-Nmax:Nmax,-Nmax:Nmax,-Nmax:Nmax,-1:1,-1:1) )
+      rspsnm=0
+
+      open(unit=101,file='sps.b')
+      read(101,*) nsps
+      allocate( sporbit(1:nsps) )
+      do i1=1,nsps
+        read(101,*) i2,i3,i4,i5,i6
+        sporbit(i1)%qnnm(1:5)=[i2,i3,i4,i5,i6]
+        rspsnm(i2,i3,i4,i5,i6)=i1
+      enddo
+      close(101)
+
       end subroutine
 
 

@@ -1,18 +1,24 @@
       include 'sps.f'
 
-      module mod_CCDsimplepairing
+      module mod_CCDcommon
       save
       real*8 :: deltaE,weight,Delta
-      integer :: nparticle
-      integer :: nspshl,nspshu,nspspl,nspspu
-      integer :: niter
-      real*8,pointer :: tijab(:,:,:,:)
-      real*8,pointer :: v(:,:,:,:),f(:,:)
-      real*8,pointer :: chi7(:,:,:,:)
-      real*8,pointer :: chi8(:,:)
-      real*8,pointer :: chi9(:,:)
-      real*8,pointer :: chi10(:,:,:,:)
       real*8 :: Ecorr,Embpt2,Ehf
+      integer :: niter
+      end module mod_CCDcommon
+
+
+      module mod_CCDsimplepairing
+      use mod_CCDcommon
+      save
+      integer,private :: nparticle
+      integer,private :: nspshl,nspshu,nspspl,nspspu
+      real*8,pointer,private :: tijab(:,:,:,:)
+      real*8,pointer,private :: v(:,:,:,:),f(:,:)
+      real*8,pointer,private :: chi7(:,:,:,:)
+      real*8,pointer,private :: chi8(:,:)
+      real*8,pointer,private :: chi9(:,:)
+      real*8,pointer,private :: chi10(:,:,:,:)
 
 
       contains
@@ -185,7 +191,7 @@
           vB(i8)=tijab(i2,j,i3,b)
         enddo
       enddo
-      a1=ddot(i1,vA,1,vB,1)
+      a1=ddot(i1,va,1,vb,1)
       CCDterm7=a1/2d0
 !      write(*,*) chi7(5,1,5,1)
 !      write(*,*) i,j,a,b
@@ -469,7 +475,6 @@
       integer :: i0,i1,i2,i3,i4,i5
       integer :: i,j,k,l,a,b,c,d
       real*8 :: a1,a2
-      character(len=1) :: c1
       integer :: ntbme
       real*8 :: aspe(1:nsps)
       real*8,pointer :: tijabnew(:,:,:,:)
@@ -480,7 +485,6 @@
 
       open(unit=101,file='parameter.dat')
       read(101,*) nparticle
-      read(101,*) c1
       close(101)
       nspshl=1
       nspshu=nparticle
@@ -536,7 +540,7 @@
         a1=a1+aspe(i1)
       enddo
       Ehf=a1
-      write(*,'(a7,f20.10)')  '  Ehf =',Ehf
+      write(*,'(a7,f20.15)')  '  Ehf =',Ehf
 
       !--------------- Initializing and calculating tijab --------------
       write(*,*) '  Calculating tijab... '
@@ -555,7 +559,7 @@
       enddo
       Ecorr=CCDEc()
       Embpt2=Ecorr
-      write(*,'(a14,f20.10)')  '  Init Ecorr =',Embpt2
+      write(*,'(a14,f20.15)')  '  Init Ecorr =',Embpt2
       niter=0
 
       allocate(tijabnew(1:nspshu,1:nspshu,nspspl:nspspu,nspspl:nspspu))
@@ -579,6 +583,7 @@
      $+CCDterm9(i,j,a,b)
      $+CCDterm10(i,j,a,b)
         a1=tijab(i,j,a,b)+a1/(f(i,i)+f(j,j)-f(a,a)-f(b,b)-Delta)
+!        a1=tijab(i,j,a,b)-a1/(f(i,i)+f(j,j)-f(a,a)-f(b,b)-Delta)**2
         tijabnew(i,j,a,b)=a1
         tijabnew(j,i,a,b)=-a1
         tijabnew(i,j,b,a)=-a1
@@ -592,7 +597,7 @@
       niter=niter+1
       if (mod(niter,10)==0) then
         write(*,'(a12,i8)')  '  Iteration:',niter
-        write(*,'(a11,f20.10)')  '    Ecorr =',Ecorrnew
+        write(*,'(a11,f25.15)')  '    Ecorr =',Ecorrnew
       endif
 
       if (abs(Ecorrnew-Ecorr)>deltaE) then
@@ -601,6 +606,7 @@
       else
         Ecorr=Ecorrnew
       endif
+!      write(*,*) weight,Delta,deltaE
 
       deallocate( chi7,chi8,chi9,chi10,tijabnew )
       
@@ -610,16 +616,576 @@
       end module mod_CCDsimplepairing
 
 
+      module mod_CCDnuclearmatter
+      use mod_CCDcommon
+      save
+      integer,private :: nparticle
+      integer,private :: nspshl,nspshu,nspspl,nspspu
+      integer,private :: nhhpp
+      integer,pointer,private :: rhhpp(:,:,:)
+      integer,pointer,private :: btablehhpp(:,:)
+      type tv
+        integer,private :: nnhh
+        integer,private :: nnpp
+        integer,pointer,private :: rhh(:,:,:,:,:,:,:)
+        integer,pointer,private :: rpp(:,:,:,:,:,:,:)
+        integer,pointer,private :: tablehh(:,:)
+        integer,pointer,private :: tablepp(:,:)
+        real*8,pointer,private :: tpphh(:,:)
+        real*8,pointer,private :: tpphhnew(:,:)
+        real*8,pointer,private :: vpphh(:,:)
+        real*8,pointer,private :: vpppp(:,:)
+        real*8,pointer,private :: vhhhh(:,:)
+      end type
+      type(tv),pointer :: stablehhpp(:)
+      real*8,pointer,private :: f(:,:)
 
-!      module mod_CCD
-!      save
-!      integer :: nparticle
-!      integer :: nspshl,nspshu,nspspl,nspspu
-!      type tCC
-!        integer :: i,j,a,b
-!      end type
-!      type(tCC),pointer :: ltijab(:)
-!      real*8,pointer :: tijab(:)
-!      integer :: ntijab
-!
-!      end module mod_CCD
+!      real*8,pointer,private :: chi7(:,:,:,:)
+!      real*8,pointer,private :: chi8(:,:)
+!      real*8,pointer,private :: chi9(:,:)
+!      real*8,pointer,private :: chi10(:,:,:,:)
+
+
+      contains
+      subroutine calCCDnuclearmatter()
+      use mod_sps
+      implicit none
+      integer :: i0,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10
+      integer :: i11,i12,i13,i14,i15,i16,i17,i18,i19
+      integer,pointer :: itmp1(:,:,:),itmp2(:,:,:)
+      integer :: itmp11(1:3),itmp12(1:7),itmp13(1:7)
+      integer :: itmp21(1:5),itmp22(1:5),itmp23(1:5),itmp24(1:5)
+      real*8 :: a1,a2
+      integer :: i,j,k,l,a,b,c,d
+      integer :: Nmax,ntbme
+      integer :: bPx,bPy,bPz
+      integer :: spx,spy,spz,s1,s2,t1,t2
+      real*8 :: aspe(1:nsps)
+      real*8 :: Ecorrnew
+      
+      write(*,*) 'This CCDsimple version works only for nuclear matter.'
+
+      open(unit=101,file='parameter.dat')
+      read(101,*)
+      read(101,*)
+      read(101,*)
+      read(101,*) nparticle,i1,Nmax
+      close(101)
+      nspshl=1
+      nspshu=nparticle
+      nspspl=nparticle+1
+      nspspu=nsps
+
+      allocate(                                      !          building big table  
+     $itmp1(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax) 
+     $,itmp2(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax) 
+     $,rhhpp(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax) 
+     $)
+      itmp1=0
+      itmp2=0
+      rhhpp=0
+      do i1=1,nparticle
+        do i2=1,nparticle
+          bPx=sporbit(i2)%qnnm(1)+sporbit(i1)%qnnm(1)
+          bPy=sporbit(i2)%qnnm(2)+sporbit(i1)%qnnm(2)
+          bPz=sporbit(i2)%qnnm(3)+sporbit(i1)%qnnm(3)
+          itmp1(bPx,bPy,bPz)=itmp1(bPx,bPy,bPz)+1
+        enddo
+      enddo
+      do i1=nspspl,nspspu
+        do i2=nspspl,nspspu
+          bPx=sporbit(i2)%qnnm(1)+sporbit(i1)%qnnm(1)
+          bPy=sporbit(i2)%qnnm(2)+sporbit(i1)%qnnm(2)
+          bPz=sporbit(i2)%qnnm(3)+sporbit(i1)%qnnm(3)
+          if (itmp1(bPx,bPy,bPz)/=0) then
+            itmp2(bPx,bPy,bPz)=itmp2(bPx,bPy,bPz)+1
+          endif
+        enddo
+      enddo
+
+      i1=0
+      do bPz=-2*Nmax,2*Nmax  ! Pz
+        do bPy=-2*Nmax,2*Nmax  ! Py
+          do bPx=-2*Nmax,2*Nmax  ! Px
+            if ( (itmp1(bPx,bPy,bPz)/=0)
+     $.and.(itmp2(bPx,bPy,bPz)/=0) ) then
+              i1=i1+1
+              rhhpp(bPx,bPy,bPz)=i1
+            endif
+          enddo
+        enddo
+      enddo
+      nhhpp=i1
+
+      allocate( btablehhpp(1:3,nhhpp),stablehhpp(1:nhhpp) )  ! building small table
+      i1=0
+      do bPz=-2*Nmax,2*Nmax  ! Pz
+        do bPy=-2*Nmax,2*Nmax  ! Py
+          do bPx=-2*Nmax,2*Nmax  ! Px
+            if ( (itmp1(bPx,bPy,bPz)/=0)
+     $.and.(itmp2(bPx,bPy,bPz)/=0) ) then
+              i1=i1+1
+              btablehhpp(1:3,i1)=[bPx,bPy,bPz]
+              i2=itmp1(bPx,bPy,bPz)  ! nnhh
+              i3=itmp2(bPx,bPy,bPz)  ! nnpp
+              stablehhpp(i1)%nnhh=i2
+              stablehhpp(i1)%nnpp=i3
+              allocate( 
+     $stablehhpp(i1)%rhh(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax
+     $,-1:1,-1:1,-1:1,-1:1)
+     $,stablehhpp(i1)%rpp(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax
+     $,-1:1,-1:1,-1:1,-1:1)
+     $,stablehhpp(i1)%tablehh(1:7,1:i2)
+     $,stablehhpp(i1)%tablepp(1:7,1:i3)
+     $,stablehhpp(i1)%tpphh(1:i3,1:i2)
+     $,stablehhpp(i1)%tpphhnew(1:i3,1:i2)
+     $,stablehhpp(i1)%vpphh(1:i3,1:i2)
+     $,stablehhpp(i1)%vpppp(1:i3,1:i3)
+     $,stablehhpp(i1)%vhhhh(1:i2,1:i2)
+     $)
+              stablehhpp(i1)%rhh=0
+              stablehhpp(i1)%rpp=0
+              stablehhpp(i1)%tpphh=0d0
+              stablehhpp(i1)%tpphhnew=0d0
+              stablehhpp(i1)%vpphh=0d0
+              stablehhpp(i1)%vpppp=0d0
+              stablehhpp(i1)%vhhhh=0d0
+              i6=0
+              do i4=1,nparticle
+                do i5=1,nparticle
+                  spx=sporbit(i4)%qnnm(1)+sporbit(i5)%qnnm(1)
+                  spy=sporbit(i4)%qnnm(2)+sporbit(i5)%qnnm(2)
+                  spz=sporbit(i4)%qnnm(3)+sporbit(i5)%qnnm(3)
+                 if ( (spx/=bPx).or.(spy/=bPy).or.(spz/=bPz) ) go to 202
+                  spx=2*sporbit(i4)%qnnm(1)-bPx
+                  spy=2*sporbit(i4)%qnnm(2)-bPy
+                  spz=2*sporbit(i4)%qnnm(3)-bPz
+                  s1=sporbit(i4)%qnnm(4)
+                  s2=sporbit(i5)%qnnm(4)
+                  t1=sporbit(i4)%qnnm(5)
+                  t2=sporbit(i5)%qnnm(5)
+                  i6=i6+1
+                  stablehhpp(i1)%tablehh(1:7,i6)
+     $=[spx,spy,spz,s1,s2,t1,t2]
+                  stablehhpp(i1)%rhh(spx,spy,spz,s1,s2,t1,t2)=i6
+202             enddo
+              enddo
+              if (i6/=i2) then
+                write(*,*) '  Building table error 1!!! STOP! '
+                stop
+              endif
+              i6=0
+              do i4=nspspl,nspspu
+                do i5=nspspl,nspspu
+                  spx=sporbit(i4)%qnnm(1)+sporbit(i5)%qnnm(1)
+                  spy=sporbit(i4)%qnnm(2)+sporbit(i5)%qnnm(2)
+                  spz=sporbit(i4)%qnnm(3)+sporbit(i5)%qnnm(3)
+                 if ( (spx/=bPx).or.(spy/=bPy).or.(spz/=bPz) ) go to 203
+                  spx=2*sporbit(i4)%qnnm(1)-bPx
+                  spy=2*sporbit(i4)%qnnm(2)-bPy
+                  spz=2*sporbit(i4)%qnnm(3)-bPz
+                  s1=sporbit(i4)%qnnm(4)
+                  s2=sporbit(i5)%qnnm(4)
+                  t1=sporbit(i4)%qnnm(5)
+                  t2=sporbit(i5)%qnnm(5)
+                  i6=i6+1
+                  stablehhpp(i1)%tablepp(1:7,i6)
+     $=[spx,spy,spz,s1,s2,t1,t2]
+                  stablehhpp(i1)%rpp(spx,spy,spz,s1,s2,t1,t2)=i6
+203             enddo
+              enddo
+              if (i6/=i3) then
+                write(*,*) '  Building table error 2!!! STOP! '
+                stop
+              endif
+            endif
+          enddo
+        enddo
+      enddo
+      deallocate( itmp1,itmp2 )
+
+      allocate( f(1:nsps,1:nsps) )
+      f=0d0
+      open(unit=101,file='fock.b')
+      read(101,*) ntbme
+      do i1=1,ntbme
+        read(101,*) i2,i3,a1
+        f(i2,i3)=a1
+      enddo
+      close(101)
+      open(unit=101,file='TBME.b')
+      read(101,*)
+      read(101,*)
+      read(101,*)
+      read(101,*) ntbme
+      read(101,*)
+      do i0=1,ntbme
+        read(101,*) i1,i2,i3,i4,i5,i6,i7,i8,i9,i10,i11,i12,i13,i14,a1
+        do i18=1,nhhpp
+          i19=stablehhpp(i18)%rpp(i1,i2,i3,i4,i5,i6,i7)
+          i15=stablehhpp(i18)%rpp(i8,i9,i10,i11,i12,i13,i14)
+          i16=stablehhpp(i18)%rhh(i1,i2,i3,i4,i5,i6,i7)
+          i17=stablehhpp(i18)%rhh(i8,i9,i10,i11,i12,i13,i14)
+          if ( (i16/=0).and.(i17/=0) ) then
+            stablehhpp(i18)%vhhhh(i16,i17)=a1
+            stablehhpp(i18)%vhhhh(i17,i16)=a1
+          endif
+          if ( (i19/=0).and.(i17/=0) ) then
+            stablehhpp(i18)%vpphh(i19,i17)=a1
+          endif
+          if ( (i15/=0).and.(i16/=0) ) then
+            stablehhpp(i18)%vpphh(i15,i16)=a1
+          endif
+          if ( (i19/=0).and.(i15/=0) ) then
+            stablehhpp(i18)%vpppp(i19,i15)=a1
+            stablehhpp(i18)%vpppp(i15,i19)=a1
+          endif
+        enddo
+      enddo
+      close(101)
+   
+      !--------------- Initializing and calculating tijab --------------
+      write(*,*) '  Calculating tijab... '
+      do i1=1,nhhpp
+        i2=stablehhpp(i1)%nnhh
+        i3=stablehhpp(i1)%nnpp
+        itmp11(1:3)=btablehhpp(1:3,i1)                ! bigP
+        do i4=1,i2  ! ij
+          itmp12(1:7)=stablehhpp(i1)%tablehh(1:7,i4)  ! smallp
+          itmp21(1:3)=( itmp11(1:3)+itmp12(1:3) )/2
+          itmp22(1:3)=( itmp11(1:3)-itmp12(1:3) )/2
+          itmp21(4)=itmp12(4)
+          itmp21(5)=itmp12(6)
+          itmp22(4)=itmp12(5)
+          itmp22(5)=itmp12(7)
+          i6=rspsnm( itmp21(1),itmp21(2),itmp21(3),itmp21(4),itmp21(5) )
+          i7=rspsnm( itmp22(1),itmp22(2),itmp22(3),itmp22(4),itmp22(5) )
+          do i5=1,i3  ! ab
+            itmp13(1:7)=stablehhpp(i1)%tablepp(1:7,i4)  ! smallp
+            itmp23(1:3)=( itmp11(1:3)+itmp13(1:3) )/2
+            itmp24(1:3)=( itmp11(1:3)-itmp13(1:3) )/2
+            itmp23(4)=itmp13(4)
+            itmp23(5)=itmp13(6)
+            itmp24(4)=itmp13(5)
+            itmp24(5)=itmp13(7)
+            i8=rspsnm(itmp23(1),itmp23(2),itmp23(3),itmp23(4),itmp23(5))
+            i9=rspsnm(itmp24(1),itmp24(2),itmp24(3),itmp24(4),itmp24(5))
+
+            stablehhpp(i1)%tpphh(i5,i4)
+     $=stablehhpp(i1)%vpphh(i5,i4)/(f(i6,i6)+f(i7,i7)-f(i8,i8)-f(i9,i9))
+
+          enddo
+        enddo
+      enddo
+
+
+!      do i1=1,nhhpp
+!        write(*,*)  i1,btablehhpp(1:3,i1)
+!      enddo
+!      write(*,*)  stablehhpp(13)%tpphh
+!      stop
+
+      Ecorr=CCDEcnm()
+      Embpt2=Ecorr
+      write(*,'(a14,f20.10)')  '  Init Ecorr =',Embpt2
+      niter=0
+
+!      call calchi7()
+!      call calchi8()
+!      call calchi9()
+!      call calchi10()
+204   continue
+      call CCDterm145()
+      call CCDterm23()
+      do i1=1,nhhpp
+        i2=stablehhpp(i1)%nnhh
+        i3=stablehhpp(i1)%nnpp
+        itmp11(1:3)=btablehhpp(1:3,i1)                ! bigP
+        do i4=1,i2  ! ij
+          itmp12(1:7)=stablehhpp(i1)%tablehh(1:7,i4)  ! smallp
+          itmp21(1:3)=( itmp11(1:3)+itmp12(1:3) )/2
+          itmp22(1:3)=( itmp11(1:3)-itmp12(1:3) )/2
+          itmp21(4)=itmp12(4)
+          itmp21(5)=itmp12(6)
+          itmp22(4)=itmp12(5)
+          itmp22(5)=itmp12(7)
+          i6=rspsnm( itmp21(1),itmp21(2),itmp21(3),itmp21(4),itmp21(5) )
+          i7=rspsnm( itmp22(1),itmp22(2),itmp22(3),itmp22(4),itmp22(5) )
+          do i5=1,i3  ! ab
+            itmp13(1:7)=stablehhpp(i1)%tablepp(1:7,i4)  ! smallp
+            itmp23(1:3)=( itmp11(1:3)+itmp13(1:3) )/2
+            itmp24(1:3)=( itmp11(1:3)-itmp13(1:3) )/2
+            itmp23(4)=itmp13(4)
+            itmp23(5)=itmp13(6)
+            itmp24(4)=itmp13(5)
+            itmp24(5)=itmp13(7)
+            i8=rspsnm(itmp23(1),itmp23(2),itmp23(3),itmp23(4),itmp23(5))
+            i9=rspsnm(itmp24(1),itmp24(2),itmp24(3),itmp24(4),itmp24(5))
+
+            stablehhpp(i1)%tpphh(i5,i4)=stablehhpp(i1)%tpphh(i5,i4)
+     $+weight*stablehhpp(i1)%tpphhnew(i5,i4)
+     $/(f(i6,i6)+f(i7,i7)-f(i8,i8)-f(i9,i9))
+
+          enddo
+        enddo
+      enddo
+
+      Ecorrnew=CCDEcnm()
+      niter=niter+1
+!      if (mod(niter,10)==0) then
+        write(*,'(a12,i8)')  '  Iteration:',niter
+        write(*,'(a11,f20.10)')  '    Ecorr =',Ecorrnew
+!      endif
+
+      if (abs(Ecorrnew-Ecorr)>deltaE) then
+        Ecorr=Ecorrnew
+        go to 204
+      else
+        Ecorr=Ecorrnew
+      endif
+
+!      write(*,*) ' HAHAHAHAHAHAHAHAHAHAHAHAHHAHAHAHA'
+
+
+      end subroutine
+
+
+      function CCDEcnm()
+      use mod_sps
+      implicit none
+      integer :: i,j,k,l,a,b,c,d
+      integer :: i1,i2,i3,i4,i5,i6
+      real*8 :: a1
+      real*8 :: CCDEcnm,ddot
+      real*8,pointer :: vA(:),vB(:)
+
+      CCDEcnm=0d0
+      do i1=1,nhhpp
+        i2=stablehhpp(i1)%nnhh
+        i3=stablehhpp(i1)%nnpp
+        allocate( vA(1:i2*i3),vB(1:i2*i3) )
+        i6=0
+        do i4=1,i2  ! ij
+          do i5=1,i3  ! ab
+            i6=i6+1
+            vA(i6)=stablehhpp(i1)%vpphh(i5,i4)
+            vB(i6)=stablehhpp(i1)%tpphh(i5,i4)
+          enddo
+        enddo
+        a1=ddot(i6,vA,1,vB,1)
+        deallocate( vA,vB )
+        CCDEcnm=CCDEcnm+a1
+      enddo
+      CCDEcnm=CCDEcnm/4d0
+
+      end function
+
+
+      subroutine CCDterm145()
+      implicit none
+      integer :: i1,i2,i3,i4
+      real*8,pointer :: A(:,:),B(:,:),C(:,:)
+
+      do i1=1,nhhpp
+        stablehhpp(i1)%tpphhnew=0d0
+        i2=stablehhpp(i1)%nnhh
+        i3=stablehhpp(i1)%nnpp
+        allocate( C(i3,i2) )
+        C=stablehhpp(i1)%vpphh
+
+!        if (i1==2) then
+!        do i4=1,16
+!          write(*,'(8f7.3)') C(i4,:)
+!        enddo
+!        write(*,*) 
+!        write(*,'(8i3)') btablehhpp(1:3,i1)
+!        do i4=1,16
+!          write(*,'(8i3)') stablehhpp(i1)%tablepp(:,i4)
+!        enddo
+!        write(*,*) 
+!        do i4=1,8
+!          write(*,'(8i3)') stablehhpp(i1)%tablehh(:,i4)
+!        enddo
+!        write(*,*) 
+!        stop
+!        endif
+
+        allocate( A(i3,i3),B(i3,i2) )
+        A=stablehhpp(i1)%vpppp
+        B=stablehhpp(i1)%tpphh
+
+!        if (i1==2) then
+!        do i4=1,16
+!          write(*,'(16f7.3)') A(i4,:)
+!        enddo
+!        write(*,*) 
+!        do i4=1,16
+!          write(*,'(8f9.5)') B(i4,:)
+!        enddo
+!        write(*,*) 
+!        stop
+!        endif
+
+
+        call dgemm('N','N',i3,i2,i3,0.5d0,A,i3,B,i3,1d0,C,i3)
+
+!        if (i1==2) then
+!        do i4=1,16
+!          write(*,'(8f7.3)') C(i4,:)
+!        enddo
+!        stop
+!        write(*,*) 
+!        endif
+
+        deallocate( A )
+        allocate( A(i2,i2) )
+        A=stablehhpp(i1)%vhhhh
+        B=stablehhpp(i1)%tpphh
+ 
+!        if (i1==2) then
+!        do i4=1,8
+!          write(*,'(8f7.3)') A(i4,:)
+!        enddo
+!        write(*,*) 
+!        do i4=1,16
+!          write(*,'(8f7.3)') B(i4,:)
+!        enddo
+!        write(*,*) 
+!        stop
+!        endif
+
+        call dgemm('N','N',i3,i2,i2,0.5d0,B,i3,A,i2,1d0,C,i3)
+ 
+!        if (i1==2) then
+!        do i4=1,16
+!          write(*,'(8f7.3)') C(i4,:)
+!        enddo
+!        stop
+!        write(*,*) 
+!        endif
+
+        stablehhpp(i1)%tpphhnew=stablehhpp(i1)%tpphhnew+C
+        deallocate( A,B,C )
+      enddo
+
+      end subroutine
+
+
+      subroutine CCDterm23()
+      use mod_sps
+      implicit none
+      integer :: i1,i2,i3,i4,i5,i6,i7,i8
+      integer :: itmp1(1:3),itmp2(1:7),itmp3(1:3),itmp4(1:7)
+
+      do i1=1,nhhpp                                  ! term2
+        itmp1(1:3)=btablehhpp(1:3,i1)                ! bigP
+        i2=stablehhpp(i1)%nnhh
+        i3=stablehhpp(i1)%nnpp
+        do i4=1,i3  ! ab
+
+          itmp2(1:7)=stablehhpp(i1)%tablepp(1:7,i4)  ! smallp
+          itmp3(1:3)=( itmp1(1:3)-itmp2(1:3) )/2     ! pb
+          i8=rspsnm(itmp3(1),itmp3(2),itmp3(3),itmp2(5),itmp2(7))
+          do i5=1,i2  ! ij
+            do i6=nspspl,nspspu  ! c
+              if ( (itmp3(1)==sporbit(i6)%qnnm(1))
+     $.and.(itmp3(2)==sporbit(i6)%qnnm(2))
+     $.and.(itmp3(3)==sporbit(i6)%qnnm(3)) ) then
+                itmp4(1:3)=itmp2(1:3)
+                itmp4(4)=itmp2(4)
+                itmp4(5)=sporbit(i6)%qnnm(4)
+                itmp4(6)=itmp2(6)
+                itmp4(7)=sporbit(i6)%qnnm(5)
+                i7=stablehhpp(i1)%rpp( itmp4(1),itmp4(2),itmp4(3)
+     $,itmp4(4),itmp4(5),itmp4(6),itmp4(7) )
+                stablehhpp(i1)%tpphhnew(i4,i5)
+     $=stablehhpp(i1)%tpphhnew(i4,i5)
+     $+f(i8,i6)*stablehhpp(i1)%tpphh(i7,i5)
+              endif
+            enddo
+          enddo
+
+          itmp3(1:3)=( itmp1(1:3)+itmp2(1:3) )/2     ! pa
+          i8=rspsnm(itmp3(1),itmp3(2),itmp3(3),itmp2(4),itmp2(6))
+          do i5=1,i2  ! ij
+            do i6=nspspl,nspspu  ! c
+              if ( (itmp3(1)==sporbit(i6)%qnnm(1))
+     $.and.(itmp3(2)==sporbit(i6)%qnnm(2))
+     $.and.(itmp3(3)==sporbit(i6)%qnnm(3)) ) then
+                itmp4(1:3)=-itmp2(1:3)
+                itmp4(4)=itmp2(5)
+                itmp4(5)=sporbit(i6)%qnnm(4)
+                itmp4(6)=itmp2(7)
+                itmp4(7)=sporbit(i6)%qnnm(5)
+                i7=stablehhpp(i1)%rpp( itmp4(1),itmp4(2),itmp4(3)
+     $,itmp4(4),itmp4(5),itmp4(6),itmp4(7) )
+                stablehhpp(i1)%tpphhnew(i4,i5)
+     $=stablehhpp(i1)%tpphhnew(i4,i5)
+     $-f(i8,i6)*stablehhpp(i1)%tpphh(i7,i5)
+              endif
+            enddo
+          enddo
+
+        enddo
+      enddo
+
+      do i1=1,nhhpp                                  ! term3
+        itmp1(1:3)=btablehhpp(1:3,i1)                ! bigP
+        i2=stablehhpp(i1)%nnhh
+        i3=stablehhpp(i1)%nnpp
+        do i4=1,i2  ! ij
+
+          itmp2(1:7)=stablehhpp(i1)%tablehh(1:7,i4)  ! smallp
+          itmp3(1:3)=( itmp1(1:3)-itmp2(1:3) )/2     ! pj
+          i8=rspsnm(itmp3(1),itmp3(2),itmp3(3),itmp2(5),itmp2(7))
+          do i5=1,i3  ! ab
+            do i6=1,nspshu  ! k
+              if ( (itmp3(1)==sporbit(i6)%qnnm(1))
+     $.and.(itmp3(2)==sporbit(i6)%qnnm(2))
+     $.and.(itmp3(3)==sporbit(i6)%qnnm(3)) ) then
+                itmp4(1:3)=itmp2(1:3)
+                itmp4(4)=itmp2(4)
+                itmp4(5)=sporbit(i6)%qnnm(4)
+                itmp4(6)=itmp2(6)
+                itmp4(7)=sporbit(i6)%qnnm(5)
+                i7=stablehhpp(i1)%rhh( itmp4(1),itmp4(2),itmp4(3)
+     $,itmp4(4),itmp4(5),itmp4(6),itmp4(7) )
+                stablehhpp(i1)%tpphhnew(i5,i4)
+     $=stablehhpp(i1)%tpphhnew(i5,i4)
+     $-f(i6,i8)*stablehhpp(i1)%tpphh(i5,i7)
+              endif
+            enddo
+          enddo
+
+          itmp2(1:7)=stablehhpp(i1)%tablehh(1:7,i4)  ! smallp
+          itmp3(1:3)=( itmp1(1:3)+itmp2(1:3) )/2     ! pi
+          i8=rspsnm(itmp3(1),itmp3(2),itmp3(3),itmp2(4),itmp2(6))
+          do i5=1,i3  ! ab
+            do i6=1,nspshu  ! k
+              if ( (itmp3(1)==sporbit(i6)%qnnm(1))
+     $.and.(itmp3(2)==sporbit(i6)%qnnm(2))
+     $.and.(itmp3(3)==sporbit(i6)%qnnm(3)) ) then
+                itmp4(1:3)=-itmp2(1:3)
+                itmp4(4)=itmp2(5)
+                itmp4(5)=sporbit(i6)%qnnm(4)
+                itmp4(6)=itmp2(7)
+                itmp4(7)=sporbit(i6)%qnnm(5)
+                i7=stablehhpp(i1)%rhh( itmp4(1),itmp4(2),itmp4(3)
+     $,itmp4(4),itmp4(5),itmp4(6),itmp4(7) )
+                stablehhpp(i1)%tpphhnew(i5,i4)
+     $=stablehhpp(i1)%tpphhnew(i5,i4)
+     $+f(i6,i8)*stablehhpp(i1)%tpphh(i5,i7)
+              endif
+            enddo
+          enddo
+
+        enddo
+      enddo
+
+      end subroutine
+
+
+!      function CCDterm6(i,j,a,b)  ! Not useful for pairing problems
+
+
+      end module mod_CCDnuclearmatter
