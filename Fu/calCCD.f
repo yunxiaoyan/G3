@@ -637,9 +637,21 @@
         real*8,pointer,private :: vpppp(:,:)
         real*8,pointer,private :: vhhhh(:,:)
       end type
-      type(tv),pointer :: stablehhpp(:)
+      type(tv),pointer,private :: stablehhpp(:)
       real*8,pointer,private :: f(:,:)
 
+      integer,private :: nhp
+      integer,pointer,private :: rhp(:,:,:)
+      integer,pointer,private :: btablehp(:,:)
+      type tv2
+        integer,private :: nnhp
+        integer,pointer,private :: rhp(:,:,:,:,:,:,:)
+        integer,pointer,private :: tablehp(:,:)
+        real*8,pointer,private :: tphhpnew(:,:)
+        real*8,pointer,private :: vhphp(:,:)
+      end type
+      type(tv2),pointer,private :: stablehp(:)
+ 
 !      real*8,pointer,private :: chi7(:,:,:,:)
 !      real*8,pointer,private :: chi8(:,:)
 !      real*8,pointer,private :: chi9(:,:)
@@ -652,7 +664,7 @@
       implicit none
       integer :: i0,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10
       integer :: i11,i12,i13,i14,i15,i16,i17,i18,i19
-      integer,pointer :: itmp1(:,:,:),itmp2(:,:,:)
+      integer,pointer :: itmp1(:,:,:),itmp2(:,:,:),itmp3(:,:,:)
       integer :: itmp11(1:3),itmp12(1:7),itmp13(1:7)
       integer :: itmp21(1:5),itmp22(1:5),itmp23(1:5),itmp24(1:5)
       real*8 :: a1,a2
@@ -680,10 +692,14 @@
      $itmp1(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax) 
      $,itmp2(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax) 
      $,rhhpp(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax) 
+!     $,itmp3(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax)                      !  ph
+!     $,rhp(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax)                      !  ph
      $)
       itmp1=0
       itmp2=0
       rhhpp=0
+!      itmp3=0                     !  ph
+!      rhp=0                     !  ph
       do i1=1,nparticle
         do i2=1,nparticle
           bPx=sporbit(i2)%qnnm(1)+sporbit(i1)%qnnm(1)
@@ -702,8 +718,17 @@
           endif
         enddo
       enddo
-
+!      do i1=nspspl,nspspu              ! ph
+!        do i2=1,nparticle
+!          bPx=sporbit(i2)%qnnm(1)-sporbit(i1)%qnnm(1)
+!          bPy=sporbit(i2)%qnnm(2)-sporbit(i1)%qnnm(2)
+!          bPz=sporbit(i2)%qnnm(3)-sporbit(i1)%qnnm(3)
+!          itmp3(bPx,bPy,bPz)=itmp3(bPx,bPy,bPz)+1
+!        enddo
+!      enddo
+ 
       i1=0
+      i2=0
       do bPz=-2*Nmax,2*Nmax  ! Pz
         do bPy=-2*Nmax,2*Nmax  ! Py
           do bPx=-2*Nmax,2*Nmax  ! Px
@@ -712,6 +737,10 @@
               i1=i1+1
               rhhpp(bPx,bPy,bPz)=i1
             endif
+!            if ( (itmp3(bPx,bPy,bPz)/=0) ) then        ! ph
+!              i2=i2+1
+!              rhp(bPx,bPy,bPz)=i2
+!            endif
           enddo
         enddo
       enddo
@@ -872,18 +901,13 @@
             i9=rspsnm(itmp24(1),itmp24(2),itmp24(3),itmp24(4),itmp24(5))
 
             stablehhpp(i1)%tpphh(i5,i4)
-     $=stablehhpp(i1)%vpphh(i5,i4)/(f(i6,i6)+f(i7,i7)-f(i8,i8)-f(i9,i9))
+     $=stablehhpp(i1)%vpphh(i5,i4)
+!     $/(f(i6,i6)+f(i7,i7)-f(i8,i8)-f(i9,i9))
+     $/(f(i6,i6)+f(i7,i7)-f(i8,i8)-f(i9,i9)-Delta)
 
           enddo
         enddo
       enddo
-
-
-!      do i1=1,nhhpp
-!        write(*,*)  i1,btablehhpp(1:3,i1)
-!      enddo
-!      write(*,*)  stablehhpp(13)%tpphh
-!      stop
 
       Ecorr=CCDEcnm()
       Embpt2=Ecorr
@@ -932,10 +956,10 @@
 
       Ecorrnew=CCDEcnm()
       niter=niter+1
-!      if (mod(niter,10)==0) then
+      if (mod(niter,10)==0) then
         write(*,'(a12,i8)')  '  Iteration:',niter
         write(*,'(a11,f20.10)')  '    Ecorr =',Ecorrnew
-!      endif
+      endif
 
       if (abs(Ecorrnew-Ecorr)>deltaE) then
         Ecorr=Ecorrnew
@@ -992,78 +1016,15 @@
         i3=stablehhpp(i1)%nnpp
         allocate( C(i3,i2) )
         C=stablehhpp(i1)%vpphh
-
-!        if (i1==2) then
-!        do i4=1,16
-!          write(*,'(8f7.3)') C(i4,:)
-!        enddo
-!        write(*,*) 
-!        write(*,'(8i3)') btablehhpp(1:3,i1)
-!        do i4=1,16
-!          write(*,'(8i3)') stablehhpp(i1)%tablepp(:,i4)
-!        enddo
-!        write(*,*) 
-!        do i4=1,8
-!          write(*,'(8i3)') stablehhpp(i1)%tablehh(:,i4)
-!        enddo
-!        write(*,*) 
-!        stop
-!        endif
-
         allocate( A(i3,i3),B(i3,i2) )
         A=stablehhpp(i1)%vpppp
         B=stablehhpp(i1)%tpphh
-
-!        if (i1==2) then
-!        do i4=1,16
-!          write(*,'(16f7.3)') A(i4,:)
-!        enddo
-!        write(*,*) 
-!        do i4=1,16
-!          write(*,'(8f9.5)') B(i4,:)
-!        enddo
-!        write(*,*) 
-!        stop
-!        endif
-
-
         call dgemm('N','N',i3,i2,i3,0.5d0,A,i3,B,i3,1d0,C,i3)
-
-!        if (i1==2) then
-!        do i4=1,16
-!          write(*,'(8f7.3)') C(i4,:)
-!        enddo
-!        stop
-!        write(*,*) 
-!        endif
-
         deallocate( A )
         allocate( A(i2,i2) )
         A=stablehhpp(i1)%vhhhh
         B=stablehhpp(i1)%tpphh
- 
-!        if (i1==2) then
-!        do i4=1,8
-!          write(*,'(8f7.3)') A(i4,:)
-!        enddo
-!        write(*,*) 
-!        do i4=1,16
-!          write(*,'(8f7.3)') B(i4,:)
-!        enddo
-!        write(*,*) 
-!        stop
-!        endif
-
         call dgemm('N','N',i3,i2,i2,0.5d0,B,i3,A,i2,1d0,C,i3)
- 
-!        if (i1==2) then
-!        do i4=1,16
-!          write(*,'(8f7.3)') C(i4,:)
-!        enddo
-!        stop
-!        write(*,*) 
-!        endif
-
         stablehhpp(i1)%tpphhnew=stablehhpp(i1)%tpphhnew+C
         deallocate( A,B,C )
       enddo
