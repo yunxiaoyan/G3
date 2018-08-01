@@ -645,8 +645,11 @@
       integer,pointer,private :: btablehp(:,:)
       type tv2
         integer,private :: nnhp
+        integer,private :: nnph
         integer,pointer,private :: rhp(:,:,:,:,:,:,:)
-        integer,pointer,private :: tablehp(:,:)
+        integer,pointer,private :: rph(:,:,:,:,:,:,:)
+        integer,pointer,private :: tablehp(:,:)  ! no need tableph
+        real*8,pointer,private :: tphhp(:,:)
         real*8,pointer,private :: tphhpnew(:,:)
         real*8,pointer,private :: vhphp(:,:)
       end type
@@ -663,8 +666,12 @@
       use mod_sps
       implicit none
       integer :: i0,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10
-      integer :: i11,i12,i13,i14,i15,i16,i17,i18,i19
+      integer :: i11,i12,i13,i14,i15,i16,i17,i18,i19,i20
+      integer :: i21,i22,i23,i24,i25,i26,i27,i28,i29,i30
+      integer :: i31,i32,i33,i34,i35,i36,i37,i38,i39,i40
+      integer :: i41,i42,i43
       integer,pointer :: itmp1(:,:,:),itmp2(:,:,:),itmp3(:,:,:)
+     $,itmp4(:,:,:)
       integer :: itmp11(1:3),itmp12(1:7),itmp13(1:7)
       integer :: itmp21(1:5),itmp22(1:5),itmp23(1:5),itmp24(1:5)
       real*8 :: a1,a2
@@ -692,14 +699,16 @@
      $itmp1(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax) 
      $,itmp2(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax) 
      $,rhhpp(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax) 
-!     $,itmp3(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax)                      !  ph
-!     $,rhp(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax)                      !  ph
+     $,itmp3(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax)         ! hp
+     $,itmp4(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax)         ! hp
+     $,rhp(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax)           ! hp
      $)
       itmp1=0
       itmp2=0
       rhhpp=0
-!      itmp3=0                     !  ph
-!      rhp=0                     !  ph
+      itmp3=0                     ! hp
+      itmp4=0                     ! hp
+      rhp=0                     ! hp
       do i1=1,nparticle
         do i2=1,nparticle
           bPx=sporbit(i2)%qnnm(1)+sporbit(i1)%qnnm(1)
@@ -718,14 +727,22 @@
           endif
         enddo
       enddo
-!      do i1=nspspl,nspspu              ! ph
-!        do i2=1,nparticle
-!          bPx=sporbit(i2)%qnnm(1)-sporbit(i1)%qnnm(1)
-!          bPy=sporbit(i2)%qnnm(2)-sporbit(i1)%qnnm(2)
-!          bPz=sporbit(i2)%qnnm(3)-sporbit(i1)%qnnm(3)
-!          itmp3(bPx,bPy,bPz)=itmp3(bPx,bPy,bPz)+1
-!        enddo
-!      enddo
+      do i1=1,nparticle              ! hp
+        do i2=nspspl,nspspu
+          bPx=sporbit(i1)%qnnm(1)-sporbit(i2)%qnnm(1)
+          bPy=sporbit(i1)%qnnm(2)-sporbit(i2)%qnnm(2)
+          bPz=sporbit(i1)%qnnm(3)-sporbit(i2)%qnnm(3)
+          itmp3(bPx,bPy,bPz)=itmp3(bPx,bPy,bPz)+1
+        enddo
+      enddo
+      do i1=nspspl,nspspu              ! hp
+        do i2=1,nparticle
+          bPx=sporbit(i1)%qnnm(1)-sporbit(i2)%qnnm(1)
+          bPy=sporbit(i1)%qnnm(2)-sporbit(i2)%qnnm(2)
+          bPz=sporbit(i1)%qnnm(3)-sporbit(i2)%qnnm(3)
+          itmp4(bPx,bPy,bPz)=itmp4(bPx,bPy,bPz)+1
+        enddo
+      enddo
  
       i1=0
       i2=0
@@ -737,14 +754,16 @@
               i1=i1+1
               rhhpp(bPx,bPy,bPz)=i1
             endif
-!            if ( (itmp3(bPx,bPy,bPz)/=0) ) then        ! ph
-!              i2=i2+1
-!              rhp(bPx,bPy,bPz)=i2
-!            endif
+            if ( (itmp3(bPx,bPy,bPz)/=0)           ! hp
+     $.and.(itmp4(bPx,bPy,bPz)/=0) ) then
+              i2=i2+1
+              rhp(bPx,bPy,bPz)=i2
+            endif
           enddo
         enddo
       enddo
       nhhpp=i1
+      nhp=i2                                           ! hp
 
       allocate( btablehhpp(1:3,nhhpp),stablehhpp(1:nhhpp) )  ! building small table
       i1=0
@@ -774,6 +793,8 @@
      $)
               stablehhpp(i1)%rhh=0
               stablehhpp(i1)%rpp=0
+              stablehhpp(i1)%tablehh=0
+              stablehhpp(i1)%tablepp=0
               stablehhpp(i1)%tpphh=0d0
               stablehhpp(i1)%tpphhnew=0d0
               stablehhpp(i1)%vpphh=0d0
@@ -833,6 +854,90 @@
       enddo
       deallocate( itmp1,itmp2 )
 
+      allocate( btablehp(1:3,nhp),stablehp(1:nhp) )              ! hp
+      i1=0
+      do bPz=-2*Nmax,2*Nmax  ! Pz
+        do bPy=-2*Nmax,2*Nmax  ! Py
+          do bPx=-2*Nmax,2*Nmax  ! Px
+            if ( (itmp3(bPx,bPy,bPz)/=0)
+     $.and.(itmp4(bPx,bPy,bPz)/=0) ) then
+              i1=i1+1
+              btablehp(1:3,i1)=[bPx,bPy,bPz]
+              i2=itmp3(bPx,bPy,bPz)  ! nnhp
+              i3=itmp4(bPx,bPy,bPz)  ! nnhp
+              stablehp(i1)%nnhp=i2
+              stablehp(i1)%nnph=i3
+              allocate( 
+     $stablehp(i1)%rhp(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax
+     $,-1:1,-1:1,-1:1,-1:1)
+     $,stablehp(i1)%rph(-2*Nmax:2*Nmax,-2*Nmax:2*Nmax,-2*Nmax:2*Nmax
+     $,-1:1,-1:1,-1:1,-1:1)
+     $,stablehp(i1)%tablehp(1:7,1:i2)
+     $,stablehp(i1)%tphhp(1:i3,1:i2)
+     $,stablehp(i1)%tphhpnew(1:i3,1:i2)
+     $,stablehp(i1)%vhphp(1:i2,1:i2)
+     $)
+              stablehp(i1)%rhp=0
+              stablehp(i1)%rph=0
+              stablehp(i1)%tablehp=0
+              stablehp(i1)%tphhp=0d0
+              stablehp(i1)%tphhpnew=0d0
+              stablehp(i1)%vhphp=0d0
+              
+              i6=0
+              do i4=1,nparticle
+                do i5=nspspl,nspspu
+                  spx=sporbit(i4)%qnnm(1)-sporbit(i5)%qnnm(1)
+                  spy=sporbit(i4)%qnnm(2)-sporbit(i5)%qnnm(2)
+                  spz=sporbit(i4)%qnnm(3)-sporbit(i5)%qnnm(3)
+                 if ( (spx/=bPx).or.(spy/=bPy).or.(spz/=bPz) ) go to 205
+                  spx=2*sporbit(i4)%qnnm(1)-bPx
+                  spy=2*sporbit(i4)%qnnm(2)-bPy
+                  spz=2*sporbit(i4)%qnnm(3)-bPz
+                  s1=sporbit(i4)%qnnm(4)
+                  s2=sporbit(i5)%qnnm(4)
+                  t1=sporbit(i4)%qnnm(5)
+                  t2=sporbit(i5)%qnnm(5)
+                  i6=i6+1
+                  stablehp(i1)%tablehp(1:7,i6)
+     $=[spx,spy,spz,s1,s2,t1,t2]
+                  stablehp(i1)%rhp(spx,spy,spz,s1,s2,t1,t2)=i6
+205             enddo
+              enddo
+              if (i6/=i2) then
+                write(*,*) '  Building table error 3!!! STOP! '
+                stop
+              endif
+
+              i6=0
+              do i4=nspspl,nspspu
+                do i5=1,nparticle
+                  spx=sporbit(i4)%qnnm(1)-sporbit(i5)%qnnm(1)
+                  spy=sporbit(i4)%qnnm(2)-sporbit(i5)%qnnm(2)
+                  spz=sporbit(i4)%qnnm(3)-sporbit(i5)%qnnm(3)
+                 if ( (spx/=bPx).or.(spy/=bPy).or.(spz/=bPz) ) go to 206
+                  spx=2*sporbit(i4)%qnnm(1)-bPx
+                  spy=2*sporbit(i4)%qnnm(2)-bPy
+                  spz=2*sporbit(i4)%qnnm(3)-bPz
+                  s1=sporbit(i4)%qnnm(4)
+                  s2=sporbit(i5)%qnnm(4)
+                  t1=sporbit(i4)%qnnm(5)
+                  t2=sporbit(i5)%qnnm(5)
+                  i6=i6+1
+                  stablehp(i1)%rph(spx,spy,spz,s1,s2,t1,t2)=i6
+206             enddo
+              enddo
+              if (i6/=i3) then
+                write(*,*) '  Building table error 4!!! STOP! '
+                stop
+              endif
+
+            endif
+          enddo
+        enddo
+      enddo
+      deallocate( itmp3,itmp4 )
+
       allocate( f(1:nsps,1:nsps) )
       f=0d0
       open(unit=101,file='fock.b')
@@ -850,6 +955,7 @@
       read(101,*)
       do i0=1,ntbme
         read(101,*) i1,i2,i3,i4,i5,i6,i7,i8,i9,i10,i11,i12,i13,i14,a1
+
         do i18=1,nhhpp
           i19=stablehhpp(i18)%rpp(i1,i2,i3,i4,i5,i6,i7)
           i15=stablehhpp(i18)%rpp(i8,i9,i10,i11,i12,i13,i14)
@@ -870,6 +976,76 @@
             stablehhpp(i18)%vpppp(i15,i19)=a1
           endif
         enddo
+
+        i15=(i1-i8)/2      ! bPx in hp                           hp
+        i16=(i2-i9)/2      ! bPy
+        i17=(i3-i10)/2     ! bP3
+        i31=i4             ! s1 in hp
+        i32=i11            ! s2
+        i33=i6             ! t1
+        i34=i13            ! t2
+        i35=i12            ! s3
+        i36=i5             ! s4
+        i37=i14            ! t3
+        i38=i7             ! t4
+        i18=rhp(i15,i16,i17)
+        if (i18/=0) then
+          i19=(i1+i8)/2
+          i20=(i2+i9)/2
+          i21=(i3+i10)/2
+          i22=stablehp(i18)%nnhp
+          do i23=1,i22    
+            i25=stablehp(i18)%tablehp(1,i23)
+            i26=stablehp(i18)%tablehp(2,i23)
+            i27=stablehp(i18)%tablehp(3,i23)
+            do i24=1,i22
+              i28=stablehp(i18)%tablehp(1,i24)
+              i29=stablehp(i18)%tablehp(2,i24)
+              i30=stablehp(i18)%tablehp(3,i24)
+              if ( (i25-i19==i28+i19).and.(i26-i20==i29+i20)
+     $.and.(i27-i21==i30+i21) ) then
+                i39=stablehp(i18)%rhp(i25,i26,i27,i31,i32,i33,i34)
+                i40=stablehp(i18)%rhp(i28,i29,i30,i35,i36,i37,i38)
+                stablehp(i18)%vhphp(i39,i40)=a1
+              endif
+            enddo
+          enddo
+        endif
+        i15=(i8-i1)/2      ! bPx in hp 
+        i16=(i9-i2)/2      ! bPy
+        i17=(i10-i3)/2     ! bP3
+        i31=i11             ! s1 in hp
+        i32=i4            ! s2
+        i33=i13             ! t1
+        i34=i6            ! t2
+        i35=i5            ! s3
+        i36=i12             ! s4
+        i37=i7            ! t3
+        i38=i14             ! t4
+        i18=rhp(i15,i16,i17)
+        if (i18/=0) then
+          i19=(i1+i8)/2
+          i20=(i2+i9)/2
+          i21=(i3+i10)/2
+          i22=stablehp(i18)%nnhp
+          do i23=1,i22    
+            i25=stablehp(i18)%tablehp(1,i23)
+            i26=stablehp(i18)%tablehp(2,i23)
+            i27=stablehp(i18)%tablehp(3,i23)
+            do i24=1,i22
+              i28=stablehp(i18)%tablehp(1,i24)
+              i29=stablehp(i18)%tablehp(2,i24)
+              i30=stablehp(i18)%tablehp(3,i24)
+              if ( (i25-i19==i28+i19).and.(i26-i20==i29+i20)
+     $.and.(i27-i21==i30+i21) ) then
+                i39=stablehp(i18)%rhp(i25,i26,i27,i31,i32,i33,i34)
+                i40=stablehp(i18)%rhp(i28,i29,i30,i35,i36,i37,i38)
+                stablehp(i18)%vhphp(i39,i40)=a1
+              endif
+            enddo
+          enddo
+        endif
+
       enddo
       close(101)
    
@@ -890,7 +1066,7 @@
           i6=rspsnm( itmp21(1),itmp21(2),itmp21(3),itmp21(4),itmp21(5) )
           i7=rspsnm( itmp22(1),itmp22(2),itmp22(3),itmp22(4),itmp22(5) )
           do i5=1,i3  ! ab
-            itmp13(1:7)=stablehhpp(i1)%tablepp(1:7,i4)  ! smallp
+            itmp13(1:7)=stablehhpp(i1)%tablepp(1:7,i5)  ! smallp
             itmp23(1:3)=( itmp11(1:3)+itmp13(1:3) )/2
             itmp24(1:3)=( itmp11(1:3)-itmp13(1:3) )/2
             itmp23(4)=itmp13(4)
@@ -921,6 +1097,9 @@
 204   continue
       call CCDterm145()
       call CCDterm23()
+!      call CCDterm_preconvertt()                   ! hp
+!      call CCDterm6_matmatmult()                    ! hp
+!      call CCDterm6_convertt()                   ! hp
       do i1=1,nhhpp
         i2=stablehhpp(i1)%nnhh
         i3=stablehhpp(i1)%nnpp
@@ -936,7 +1115,7 @@
           i6=rspsnm( itmp21(1),itmp21(2),itmp21(3),itmp21(4),itmp21(5) )
           i7=rspsnm( itmp22(1),itmp22(2),itmp22(3),itmp22(4),itmp22(5) )
           do i5=1,i3  ! ab
-            itmp13(1:7)=stablehhpp(i1)%tablepp(1:7,i4)  ! smallp
+            itmp13(1:7)=stablehhpp(i1)%tablepp(1:7,i5)  ! smallp
             itmp23(1:3)=( itmp11(1:3)+itmp13(1:3) )/2
             itmp24(1:3)=( itmp11(1:3)-itmp13(1:3) )/2
             itmp23(4)=itmp13(4)
@@ -968,8 +1147,8 @@
         Ecorr=Ecorrnew
       endif
 
-!      write(*,*) ' HAHAHAHAHAHAHAHAHAHAHAHAHHAHAHAHA'
 
+!      write(*,*) ' HAHAHAHAHAHAHAHAHAHAHAHAHHAHAHAHA'
 
       end subroutine
 
@@ -1146,7 +1325,203 @@
       end subroutine
 
 
-!      function CCDterm6(i,j,a,b)  ! Not useful for pairing problems
+      subroutine CCDterm_preconvertt()
+      implicit none
+      integer :: i1,i2,i3,i4,i5,i6,i7,i8
+      integer :: itmp1(1:3),itmp2(1:7),itmp3(1:7)
+      integer :: itmp11(1:3),itmp12(1:7),itmp13(1:7)
+
+      do i1=1,nhp
+        stablehp(i1)%tphhp=0d0
+      enddo
+
+      do i1=1,nhhpp
+        itmp1(1:3)=btablehhpp(1:3,i1)
+        i2=stablehhpp(i1)%nnhh
+        i3=stablehhpp(i1)%nnpp
+        do i4=1,i2          ! ij
+          itmp3(1:7)=stablehhpp(i1)%tablehh(1:7,i4)
+          do i5=1,i3        ! ab
+            itmp2(1:7)=stablehhpp(i1)%tablepp(1:7,i5)
+
+            itmp11(1)=(itmp2(1)-itmp3(1))/2
+            itmp11(2)=(itmp2(2)-itmp3(2))/2
+            itmp11(3)=(itmp2(3)-itmp3(3))/2
+            itmp12(1)=itmp1(1)+(itmp2(1)+itmp3(1))/2
+            itmp12(2)=itmp1(2)+(itmp2(2)+itmp3(2))/2
+            itmp12(3)=itmp1(3)+(itmp2(3)+itmp3(3))/2
+            itmp13(1)=itmp1(1)-(itmp2(1)+itmp3(1))/2
+            itmp13(2)=itmp1(2)-(itmp2(2)+itmp3(2))/2
+            itmp13(3)=itmp1(3)-(itmp2(3)+itmp3(3))/2
+            itmp12(4)=itmp2(4)
+            itmp12(5)=itmp3(4)
+            itmp13(4)=itmp3(5)
+            itmp13(5)=itmp2(5)
+            itmp12(6)=itmp2(6)
+            itmp12(7)=itmp3(6)
+            itmp13(6)=itmp3(7)
+            itmp13(7)=itmp2(7)
+            i6=rhp(itmp11(1),itmp11(2),itmp11(3))  
+            i7=stablehp(i6)%rph(itmp12(1),itmp12(2),itmp12(3),itmp12(4)
+     $,itmp12(5),itmp12(6),itmp12(7))
+            i8=stablehp(i6)%rhp(itmp13(1),itmp13(2),itmp13(3),itmp13(4)
+     $,itmp13(5),itmp13(6),itmp13(7))
+
+            stablehp(i6)%tphhp(i7,i8)=stablehhpp(i1)%tpphh(i5,i4)
+
+          enddo
+        enddo
+      enddo
+
+      end subroutine
+
+
+      subroutine CCDterm6_matmatmult()
+      implicit none
+      integer :: i1,i2,i3,i4
+      real*8,pointer :: A(:,:),B(:,:),C(:,:)
+
+      do i1=1,nhp
+        stablehp(i1)%tphhpnew=0d0
+        i2=stablehp(i1)%nnhp
+        allocate( C(i2,i2) )
+        C=0d0
+        allocate( A(i2,i2),B(i2,i2) )
+        A=stablehp(i1)%vhphp
+        B=stablehp(i1)%tphhp
+        call dgemm('N','N',i2,i2,i2,1d0,B,i2,A,i2,0d0,C,i2)
+        stablehp(i1)%tphhpnew=C
+
+        deallocate( A,B,C )
+      enddo
+
+      end subroutine
+
+
+      subroutine CCDterm6_convertt()
+      implicit none
+      integer :: i1,i2,i3,i4,i5,i6,i7,i8
+      integer :: itmp1(1:3),itmp2(1:7),itmp3(1:7)
+      integer :: itmp11(1:3),itmp12(1:7),itmp13(1:7)
+
+      do i1=1,nhhpp
+        itmp1(1:3)=btablehhpp(1:3,i1)
+        i2=stablehhpp(i1)%nnhh
+        i3=stablehhpp(i1)%nnpp
+        do i4=1,i2          ! ij
+          itmp3(1:7)=stablehhpp(i1)%tablehh(1:7,i4)
+          do i5=1,i3        ! ab
+            itmp2(1:7)=stablehhpp(i1)%tablepp(1:7,i5)
+
+            itmp11(1)=(itmp2(1)-itmp3(1))/2
+            itmp11(2)=(itmp2(2)-itmp3(2))/2
+            itmp11(3)=(itmp2(3)-itmp3(3))/2
+            itmp12(1)=itmp1(1)+(itmp2(1)+itmp3(1))/2
+            itmp12(2)=itmp1(2)+(itmp2(2)+itmp3(2))/2
+            itmp12(3)=itmp1(3)+(itmp2(3)+itmp3(3))/2
+            itmp13(1)=itmp1(1)-(itmp2(1)+itmp3(1))/2
+            itmp13(2)=itmp1(2)-(itmp2(2)+itmp3(2))/2
+            itmp13(3)=itmp1(3)-(itmp2(3)+itmp3(3))/2
+            itmp12(4)=itmp2(4)
+            itmp12(5)=itmp3(4)
+            itmp13(4)=itmp3(5)
+            itmp13(5)=itmp2(5)
+            itmp12(6)=itmp2(6)
+            itmp12(7)=itmp3(6)
+            itmp13(6)=itmp3(7)
+            itmp13(7)=itmp2(7)
+            i6=rhp(itmp11(1),itmp11(2),itmp11(3))  
+            i7=stablehp(i6)%rph(itmp12(1),itmp12(2),itmp12(3),itmp12(4)
+     $,itmp12(5),itmp12(6),itmp12(7))
+            i8=stablehp(i6)%rhp(itmp13(1),itmp13(2),itmp13(3),itmp13(4)
+     $,itmp13(5),itmp13(6),itmp13(7))
+            stablehhpp(i1)%tpphhnew(i5,i4)
+     $=stablehhpp(i1)%tpphhnew(i5,i4)
+     $+stablehp(i6)%tphhpnew(i7,i8)
+
+            itmp11(1)=-(itmp2(1)+itmp3(1))/2        ! -Pab
+            itmp11(2)=-(itmp2(2)+itmp3(2))/2
+            itmp11(3)=-(itmp2(3)+itmp3(3))/2
+            itmp12(1)=itmp1(1)+(itmp3(1)-itmp2(1))/2
+            itmp12(2)=itmp1(2)+(itmp3(2)-itmp2(2))/2
+            itmp12(3)=itmp1(3)+(itmp3(3)-itmp2(3))/2
+            itmp13(1)=itmp1(1)+(itmp2(1)-itmp3(1))/2
+            itmp13(2)=itmp1(2)+(itmp2(2)-itmp3(2))/2
+            itmp13(3)=itmp1(3)+(itmp2(3)-itmp3(3))/2
+            itmp12(4)=itmp2(5)
+            itmp12(5)=itmp3(4)
+            itmp13(4)=itmp3(5)
+            itmp13(5)=itmp2(4)
+            itmp12(6)=itmp2(7)
+            itmp12(7)=itmp3(6)
+            itmp13(6)=itmp3(7)
+            itmp13(7)=itmp2(6)
+            i6=rhp(itmp11(1),itmp11(2),itmp11(3))  
+            i7=stablehp(i6)%rph(itmp12(1),itmp12(2),itmp12(3),itmp12(4)
+     $,itmp12(5),itmp12(6),itmp12(7))
+            i8=stablehp(i6)%rhp(itmp13(1),itmp13(2),itmp13(3),itmp13(4)
+     $,itmp13(5),itmp13(6),itmp13(7))
+            stablehhpp(i1)%tpphhnew(i5,i4)
+     $=stablehhpp(i1)%tpphhnew(i5,i4)
+     $-stablehp(i6)%tphhpnew(i7,i8)
+
+            itmp11(1)=(itmp2(1)+itmp3(1))/2       ! -Pij
+            itmp11(2)=(itmp2(2)+itmp3(2))/2
+            itmp11(3)=(itmp2(3)+itmp3(3))/2
+            itmp12(1)=itmp1(1)+(itmp2(1)-itmp3(1))/2
+            itmp12(2)=itmp1(2)+(itmp2(2)-itmp3(2))/2
+            itmp12(3)=itmp1(3)+(itmp2(3)-itmp3(3))/2
+            itmp13(1)=itmp1(1)+(itmp3(1)-itmp2(1))/2
+            itmp13(2)=itmp1(2)+(itmp3(2)-itmp2(2))/2
+            itmp13(3)=itmp1(3)+(itmp3(3)-itmp2(3))/2
+            itmp12(4)=itmp2(4)
+            itmp12(5)=itmp3(5)
+            itmp13(4)=itmp3(4)
+            itmp13(5)=itmp2(5)
+            itmp12(6)=itmp2(6)
+            itmp12(7)=itmp3(7)
+            itmp13(6)=itmp3(6)
+            itmp13(7)=itmp2(7)
+            i6=rhp(itmp11(1),itmp11(2),itmp11(3))  
+            i7=stablehp(i6)%rph(itmp12(1),itmp12(2),itmp12(3),itmp12(4)
+     $,itmp12(5),itmp12(6),itmp12(7))
+            i8=stablehp(i6)%rhp(itmp13(1),itmp13(2),itmp13(3),itmp13(4)
+     $,itmp13(5),itmp13(6),itmp13(7))
+            stablehhpp(i1)%tpphhnew(i5,i4)
+     $=stablehhpp(i1)%tpphhnew(i5,i4)
+     $-stablehp(i6)%tphhpnew(i7,i8)
+
+            itmp11(1)=(itmp3(1)-itmp2(1))/2       ! PijPab
+            itmp11(2)=(itmp3(2)-itmp2(2))/2
+            itmp11(3)=(itmp3(3)-itmp2(3))/2
+            itmp12(1)=itmp1(1)-(itmp2(1)+itmp3(1))/2
+            itmp12(2)=itmp1(2)-(itmp2(2)+itmp3(2))/2
+            itmp12(3)=itmp1(3)-(itmp2(3)+itmp3(3))/2
+            itmp13(1)=itmp1(1)+(itmp3(1)+itmp2(1))/2
+            itmp13(2)=itmp1(2)+(itmp3(2)+itmp2(2))/2
+            itmp13(3)=itmp1(3)+(itmp3(3)+itmp2(3))/2
+            itmp12(4)=itmp2(5)
+            itmp12(5)=itmp3(5)
+            itmp13(4)=itmp3(4)
+            itmp13(5)=itmp2(4)
+            itmp12(6)=itmp2(7)
+            itmp12(7)=itmp3(7)
+            itmp13(6)=itmp3(6)
+            itmp13(7)=itmp2(6)
+            i6=rhp(itmp11(1),itmp11(2),itmp11(3))  
+            i7=stablehp(i6)%rph(itmp12(1),itmp12(2),itmp12(3),itmp12(4)
+     $,itmp12(5),itmp12(6),itmp12(7))
+            i8=stablehp(i6)%rhp(itmp13(1),itmp13(2),itmp13(3),itmp13(4)
+     $,itmp13(5),itmp13(6),itmp13(7))
+            stablehhpp(i1)%tpphhnew(i5,i4)
+     $=stablehhpp(i1)%tpphhnew(i5,i4)
+     $+stablehp(i6)%tphhpnew(i7,i8)
+
+          enddo
+        enddo
+      enddo
+
+      end subroutine
 
 
       end module mod_CCDnuclearmatter
