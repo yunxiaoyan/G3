@@ -1,4 +1,89 @@
+      module mod_mergesort
+      save
+      integer,pointer :: spl(:,:)
+      real*8,pointer :: aspe(:)
+
+
+      contains
+      subroutine Merger(left,mid,right)
+      implicit none
+      integer :: left,mid,right
+      integer :: length,i,j,k,ind
+      integer,pointer :: temp(:,:)
+      real*8,pointer :: atemp(:)
+
+      length=right-left+1
+      allocate( atemp(1:length),temp(1:5,1:length) )
+      ind=1
+      i=left
+      j=mid+1
+
+      do while ( (i<=mid).and.(j<=right) )
+        if (aspe(i)<=aspe(j)) then
+          atemp(ind)=aspe(i)
+          temp(1:5,ind)=spl(1:5,i)
+          ind=ind+1
+          i=i+1
+        else
+          atemp(ind)=aspe(j)
+          temp(1:5,ind)=spl(1:5,j)
+          ind=ind+1
+          j=j+1
+        endif
+      enddo
+
+      do while (i<=mid)
+        atemp(ind)=aspe(i)
+        temp(1:5,ind)=spl(1:5,i)
+        ind=ind+1
+        i=i+1
+      enddo
+
+      do while (j<=right)
+        atemp(ind)=aspe(j)
+        temp(1:5,ind)=spl(1:5,j)
+        ind=ind+1
+        j=j+1
+      enddo
+
+      do k=1,length
+        aspe(left)=atemp(k)
+        spl(1:5,left)=temp(1:5,k)
+        left=left+1
+      enddo
+
+      end subroutine
+
+
+      subroutine MergeSorter(length)
+      implicit none
+      integer :: left,mid,right
+      integer :: length,i,j,k
+
+      i=1
+      do while (i<length)
+        left=1
+        do while (left+i<=length)
+          mid=left+i-1
+          if (mid+i<=length) then
+            right=mid+i
+          else
+            right=length
+          endif
+          call Merger(left,mid,right)
+          left=right+1
+        enddo
+        i=i*2
+      enddo
+      
+      end subroutine
+
+
+      end module mod_mergesort
+
+
       program generate sps and tbme for nuclear matter
+      use mod_mergesort
       implicit none
       real*8,parameter :: Pi=3.14159265358979323846d0
       real*8,parameter :: mp=938.2720813d0
@@ -16,8 +101,6 @@
       real*8 :: Minnesota
       integer :: A,Nmax
       character(len=1) :: c1
-      integer,pointer :: spl(:,:)
-      real*8,pointer :: aspe(:),k(:,:)
       integer :: ntb,ntbme,nfock
       real*8,pointer :: smallp(:,:)
       integer,pointer :: st(:,:),smallpi(:,:)
@@ -95,12 +178,6 @@
           stop
         endif
       endif
-      open(unit=101,file='sps.b')
-      write(101,'(i6,a17)') nsps,' nx ny nz sz tz'
-      do i1=1,nsps
-        write(101,'(5i5)') spl(1:5,i1)
-      enddo
-      close(101)
 
       allocate( aspe(1:nsps) )
       a1=2d0*mn*L*L
@@ -121,6 +198,14 @@
           aspe(i1)=a3*a2
         endif
       enddo
+
+      call MergeSorter(nsps)
+      open(unit=101,file='sps.b')
+      write(101,'(i6,a21)') nsps,' nx ny nz sz tz spe'
+      do i1=1,nsps
+        write(101,'(5i5,f25.15)') spl(1:5,i1),aspe(i1)
+      enddo
+      close(101)
 
       if ( (c1=='n').or.(c1=='N') ) then
         ntb=(4*Nmax+1)*(4*Nmax+1)*(4*Nmax+1)*4
@@ -169,14 +254,30 @@
         write(*,*) ' Two body wrong!!! STOP! '
         stop
       endif
-      allocate( tbmel(1:14,1:ntb*(ntb+1)/2),tbmev(1:ntb*(ntb+1)/2) )
+      write(*,*) ' S.p. and t.b. states ready...' 
 
       ntbme=0
       do i1=1,ntb
         do i2=i1,ntb
           if ( (mod(abs(smallpi(1,i1)-smallpi(1,i2)),2)/=0)
      $.or.(mod(abs(smallpi(2,i1)-smallpi(2,i2)),2)/=0)
-     $.or.(mod(abs(smallpi(3,i1)-smallpi(3,i2)),2)/=0) ) go to 201
+     $.or.(mod(abs(smallpi(3,i1)-smallpi(3,i2)),2)/=0)
+     $.or.((st(1,i1)+st(2,i1))/=(st(1,i2)+st(2,i2)))
+     $.or.((st(3,i1)+st(4,i1))/=(st(3,i2)+st(4,i2))) ) go to 202
+          ntbme=ntbme+1
+202     enddo
+      enddo
+      write(*,'(a33,i10)') ' Number of possible nonzero tbme:',ntbme
+      allocate( tbmel(1:14,1:ntbme),tbmev(1:ntbme) )
+
+      ntbme=0
+      do i1=1,ntb
+        do i2=i1,ntb
+          if ( (mod(abs(smallpi(1,i1)-smallpi(1,i2)),2)/=0)
+     $.or.(mod(abs(smallpi(2,i1)-smallpi(2,i2)),2)/=0)
+     $.or.(mod(abs(smallpi(3,i1)-smallpi(3,i2)),2)/=0)
+     $.or.((st(1,i1)+st(2,i1))/=(st(1,i2)+st(2,i2)))
+     $.or.((st(3,i1)+st(4,i1))/=(st(3,i2)+st(4,i2))) ) go to 201
           atmpl(1:3)=smallp(1:3,i1)
           atmpr(1:3)=smallp(1:3,i2)
           itmpl(1:4)=st(1:4,i1)
@@ -195,15 +296,16 @@
           endif
 201     enddo
       enddo
+      write(*,'(a33,i10)') ' Number of nonzero tbme:',ntbme
 
       open(unit=101,file='TBME.b')
       write(101,*) '###'
       write(101,*) '###'
       write(101,*) '###'
       write(101,'(i10)',advance='no') ntbme
-      do i1=1,nsps
-        write(101,'(f25.15)',advance='no') aspe(i1)
-      enddo
+!      do i1=1,nsps
+!        write(101,'(f25.15)',advance='no') aspe(i1)
+!      enddo
       write(101,*) 
       write(101,'(a48,a25)') 
      $' 2px 2py 2pz s1 s2 t1 t2 2px 2py 2pz s3 s4 t3 t4','v'
@@ -213,6 +315,7 @@
       enddo
       close(101)
 
+      write(*,'(a39)') ' Calculating fock matrix and Ehf...'
       a2=2d0*Pi/L
       nfock=0
       allocate( fockl(1:2,1:nsps*nsps),fockv(1:nsps*nsps) )
@@ -301,6 +404,9 @@
       real*8,parameter :: VR=200d0
       real*8,parameter :: VS=-91.85d0
       real*8,parameter :: VT=-178d0
+!      real*8,parameter :: VR=0d0
+!      real*8,parameter :: VS=0d0
+!      real*8,parameter :: VT=0d0
       real*8,parameter :: kapaR=1.487d0
       real*8,parameter :: kapaS=0.465d0
       real*8,parameter :: kapaT=0.639d0
@@ -360,3 +466,5 @@
       endif
 
       end function
+
+

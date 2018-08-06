@@ -33,9 +33,13 @@
       elseif ( (c1=='n').or.(c1=='N') ) then
         call readsps_nuclearmatter()
         call calCCDnuclearmatter()
+        open(unit=101,file='fock.b')
+        read(101,'(18x,f25.15)') a1
+        close(101)
         open(unit=101,file='level_CCone.dat')
         write(*,'(a12,i8)')  '  Iteration:',niter
         write(*,'(a11,f25.15)')  '    Ecorr =',Ecorr
+        write(101,'(a7,f25.15)')  '  Ehf =',a1
         write(101,'(a14,f25.15)') '  Init Ecorr =',Embpt2
         write(101,'(a12,i8)')  '  Iteration:',niter
         write(101,'(a11,f25.15)')  '    Ecorr =',Ecorr
